@@ -41,6 +41,7 @@ val commonSettings = Seq(
   libraryDependencies ++= Seq(
         Libraries.catsEffectKernel,
         Libraries.redisClient,
+        Libraries.lettuceMod,
         Libraries.catsEffect      % Test,
         Libraries.catsLaws        % Test,
         Libraries.catsTestKit     % Test,

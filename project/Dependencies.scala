@@ -10,6 +10,7 @@ object Dependencies {
     val log4cats   = "2.1.1"
 
     val lettuce = "6.1.5.RELEASE"
+    val lettuceMod = "1.8.1"
     val logback = "1.2.10"
 
     val kindProjector = "0.13.2"
@@ -27,6 +28,7 @@ object Dependencies {
     val log4CatsCore = log4cats("core")
 
     val redisClient = "io.lettuce" % "lettuce-core" % V.lettuce
+    val lettuceMod = "com.redis" % "lettucemod" % V.lettuceMod
 
     // Examples libraries
     val catsEffect    = "org.typelevel" %% "cats-effect" % V.catsEffect

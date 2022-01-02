@@ -22,6 +22,7 @@ import cats._
 import cats.data.NonEmptyList
 import cats.effect.kernel._
 import cats.syntax.all._
+import com.redis.lettucemod.search.{AggregateOptions, AggregateResults, AggregateWithCursorResults, CreateOptions, Cursor, Field, SearchOptions, SearchResults, Suggestion, SuggetOptions}
 import dev.profunktor.redis4cats.algebra.BitCommandOperation
 import dev.profunktor.redis4cats.algebra.BitCommandOperation.Overflows
 import dev.profunktor.redis4cats.connection._
@@ -30,24 +31,10 @@ import dev.profunktor.redis4cats.effect._
 import dev.profunktor.redis4cats.effect.FutureLift._
 import dev.profunktor.redis4cats.effects._
 import dev.profunktor.redis4cats.transactions.TransactionDiscarded
-import io.lettuce.core.{
-  BitFieldArgs,
-  ClientOptions,
-  GeoArgs,
-  GeoRadiusStoreArgs,
-  GeoWithin,
-  ScoredValue,
-  ZAddArgs,
-  ZStoreArgs,
-  Limit => JLimit,
-  Range => JRange,
-  ReadFrom => JReadFrom,
-  ScanCursor => JScanCursor,
-  SetArgs => JSetArgs
-}
+import io.lettuce.core.{BitFieldArgs, ClientOptions, GeoArgs, GeoRadiusStoreArgs, GeoWithin, ScoredValue, ZAddArgs, ZStoreArgs, Limit => JLimit, Range => JRange, ReadFrom => JReadFrom, ScanCursor => JScanCursor, SetArgs => JSetArgs}
 import io.lettuce.core.api.async.RedisAsyncCommands
 import io.lettuce.core.cluster.api.async.RedisClusterAsyncCommands
-import io.lettuce.core.cluster.api.sync.{ RedisClusterCommands => RedisClusterSyncCommands }
+import io.lettuce.core.cluster.api.sync.{RedisClusterCommands => RedisClusterSyncCommands}
 
 import scala.concurrent.duration._
 
@@ -1570,6 +1557,60 @@ private[redis4cats] class BaseRedis[F[_]: FutureLift: MonadThrow: RedisExecutor:
       .flatMap(c => RedisExecutor[F].delay(c.pfmerge(outputKey, inputKeys: _*)))
       .futureLift
       .void
+
+  /** ***************************** Search API **********************************/
+
+  override def create(index: K, options: Option[CreateOptions[K, V]], fields: Field*): F[Unit] = ???
+
+  override def dictAdd(dict: K, terms: V*): F[Long] = ???
+
+  override def dictDel(dict: K, terms: V*): F[Long] = ???
+
+  override def dictDump(dict: K): F[Seq[V]] = ???
+
+  override def search(index: K, query: V, options: Option[SearchOptions[K, V]]): F[SearchResults[K, V]] = ???
+
+  override def aggregate(index: K, query: V, options: Option[AggregateOptions[K, V]]): F[AggregateResults[K]] = ???
+
+  override def aggregate(index: K, query: V, cursor: Cursor, options: Option[AggregateOptions[K, V]]): F[AggregateWithCursorResults[K]] = ???
+
+  override def cursorRead(index: K, cursor: Long): F[AggregateWithCursorResults[K]] = ???
+
+  override def cursorRead(index: K, cursor: Long, count: Long): F[AggregateWithCursorResults[K]] = ???
+
+  override def cursorDelete(index: K, cursor: Long): F[Boolean] = ???
+
+  override def alter(index: K, field: Field): F[Unit] = ???
+
+  override def indexInfo(index: K): F[List[Any]] = ???
+
+  override def list: F[Seq[K]] = ???
+
+  override def sugAddSet(key: String, string: V, value: Double): F[Unit] = ???
+
+  override def sugAddIncr(key: String, string: V, value: Double): F[Unit] = ???
+
+  override def sugAddSet(key: String, string: V, value: Double, payload: V): F[Unit] = ???
+
+  override def sugAddIncr(key: String, string: V, value: Double, payload: V): F[Unit] = ???
+
+  override def sugGet(key: K, prefix: String, options: Option[SuggetOptions]): F[Seq[Suggestion[V]]] = ???
+
+  override def sugDel(key: K, string: V): F[Boolean] = ???
+
+  override def sugLen(key: K): F[Long] = ???
+
+  override def tagVals(index: K, field: K): F[Seq[V]] = ???
+
+  override def dropIndex(index: K): F[Unit] = ???
+
+  override def dropIndexDeleteDocs(index: K): F[Unit] = ???
+
+  override def aliasAdd(name: K, index: V): F[Boolean] = ???
+
+  override def aliasUpdate(name: K, index: V): F[Boolean] = ???
+
+  override def aliasDel(name: K): F[Boolean] = ???
 }
 
 private[redis4cats] trait RedisConversionOps {

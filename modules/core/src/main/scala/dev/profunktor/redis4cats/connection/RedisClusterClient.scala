@@ -30,11 +30,11 @@ import io.lettuce.core.cluster.models.partitions.{ Partitions => JPartitions }
 import io.lettuce.core.cluster.{
   ClusterClientOptions,
   ClusterTopologyRefreshOptions,
-  SlotHash,
-  RedisClusterClient => JClusterClient
+  SlotHash
 }
+import com.redis.lettucemod.cluster.{RedisModulesClusterClient => JRedisModulesClusterClient}
 
-sealed abstract case class RedisClusterClient private (underlying: JClusterClient)
+sealed abstract case class RedisClusterClient private (underlying: JRedisModulesClusterClient)
 
 object RedisClusterClient {
 
@@ -46,7 +46,7 @@ object RedisClusterClient {
     val acquire: F[RedisClusterClient] =
       Log[F].info(s"Acquire Redis Cluster client") *>
           RedisExecutor[F]
-            .lift(JClusterClient.create(uri.map(_.underlying).asJava))
+            .lift(JRedisModulesClusterClient.create(uri.map(_.underlying).asJava))
             .flatTap(initializeClusterTopology[F](_, config.topologyViewRefreshStrategy))
             .map(new RedisClusterClient(_) {})
 
@@ -68,7 +68,7 @@ object RedisClusterClient {
   }
 
   private[redis4cats] def initializeClusterTopology[F[_]: Functor: RedisExecutor](
-      client: JClusterClient,
+      client: JRedisModulesClusterClient,
       topologyViewRefreshStrategy: TopologyViewRefreshStrategy
   ): F[Unit] =
     RedisExecutor[F].lift {
@@ -122,7 +122,7 @@ object RedisClusterClient {
       Resource.make(acquire)(release)
     }
 
-  def fromUnderlying(underlying: JClusterClient): RedisClusterClient =
+  def fromUnderlying(underlying: JRedisModulesClusterClient): RedisClusterClient =
     new RedisClusterClient(underlying) {}
 
   def nodeId[F[_]: Sync](
@@ -134,6 +134,6 @@ object RedisClusterClient {
     }
 
   def partitions[F[_]: Sync](client: RedisClusterClient): F[JPartitions] =
-    Sync[F].delay(client.underlying.getPartitions())
+    Sync[F].delay(client.underlying.getPartitions)
 
 }

@@ -23,9 +23,10 @@ import cats.effect.kernel.{ Resource, Sync }
 import cats.syntax.all._
 import dev.profunktor.redis4cats.config.Redis4CatsConfig
 import dev.profunktor.redis4cats.effect._
-import io.lettuce.core.{ ClientOptions, RedisClient => JRedisClient, RedisURI => JRedisURI }
+import io.lettuce.core.{ ClientOptions, RedisURI => JRedisURI }
+import com.redis.lettucemod.{RedisModulesClient => JRedisModulesClient}
 
-sealed abstract case class RedisClient private (underlying: JRedisClient, uri: RedisURI)
+sealed abstract case class RedisClient private (underlying: JRedisModulesClient, uri: RedisURI)
 
 object RedisClient {
 
@@ -35,7 +36,7 @@ object RedisClient {
       config: Redis4CatsConfig
   ): (F[RedisClient], RedisClient => F[Unit]) = {
     val acquire: F[RedisClient] = RedisExecutor[F].lift {
-      val jClient: JRedisClient = JRedisClient.create(uri.underlying)
+      val jClient: JRedisModulesClient = JRedisModulesClient.create(uri.underlying)
       jClient.setOptions(opts)
       new RedisClient(jClient, uri) {}
     }
@@ -151,7 +152,7 @@ object RedisClient {
 
   def apply[F[_]: MkRedis: MonadThrow]: RedisClientPartiallyApplied[F] = new RedisClientPartiallyApplied[F]
 
-  def fromUnderlyingWithUri(underlying: JRedisClient, uri: RedisURI): RedisClient =
+  def fromUnderlyingWithUri(underlying: JRedisModulesClient, uri: RedisURI): RedisClient =
     new RedisClient(underlying, uri) {}
 
 }

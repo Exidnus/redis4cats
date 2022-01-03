@@ -32,9 +32,9 @@ import dev.profunktor.redis4cats.effect.FutureLift._
 import dev.profunktor.redis4cats.effects._
 import dev.profunktor.redis4cats.transactions.TransactionDiscarded
 import io.lettuce.core.{BitFieldArgs, ClientOptions, GeoArgs, GeoRadiusStoreArgs, GeoWithin, ScoredValue, ZAddArgs, ZStoreArgs, Limit => JLimit, Range => JRange, ReadFrom => JReadFrom, ScanCursor => JScanCursor, SetArgs => JSetArgs}
-import io.lettuce.core.api.async.RedisAsyncCommands
-import io.lettuce.core.cluster.api.async.RedisClusterAsyncCommands
-import io.lettuce.core.cluster.api.sync.{RedisClusterCommands => RedisClusterSyncCommands}
+import com.redis.lettucemod.api.async.RedisModulesAsyncCommands
+import com.redis.lettucemod.cluster.api.async.RedisModulesClusterAsyncCommands
+import com.redis.lettucemod.cluster.api.sync.{RedisModulesClusterCommands => RedisModulesClusterSyncCommands}
 
 import scala.concurrent.duration._
 
@@ -87,9 +87,9 @@ object Redis {
       .flatTap(c => RedisExecutor[F].lift(readFrom.foreach(c.setReadFrom)))
       .map { c =>
         new BaseRedis[F, K, V](new RedisStatefulClusterConnection[F, K, V](c), cluster = true) {
-          override def async: F[RedisClusterAsyncCommands[K, V]] =
-            if (cluster) conn.byNode(nodeId).widen[RedisClusterAsyncCommands[K, V]]
-            else conn.async.widen[RedisClusterAsyncCommands[K, V]]
+          override def async: F[RedisModulesClusterAsyncCommands[K, V]] =
+            if (cluster) conn.byNode(nodeId).widen[RedisModulesClusterAsyncCommands[K, V]]
+            else conn.async.widen[RedisModulesClusterAsyncCommands[K, V]]
         }
       }
 
@@ -423,10 +423,10 @@ private[redis4cats] class BaseRedis[F[_]: FutureLift: MonadThrow: RedisExecutor:
 
   import dev.profunktor.redis4cats.JavaConversions._
 
-  def async: F[RedisClusterAsyncCommands[K, V]] =
+  def async: F[RedisModulesClusterAsyncCommands[K, V]] =
     if (cluster) conn.clusterAsync else conn.async.widen
 
-  def sync: F[RedisClusterSyncCommands[K, V]] =
+  def sync: F[RedisModulesClusterSyncCommands[K, V]] =
     if (cluster) conn.clusterSync else conn.sync.widen
 
   /******************************* Keys API *************************************/
@@ -538,7 +538,7 @@ private[redis4cats] class BaseRedis[F[_]: FutureLift: MonadThrow: RedisExecutor:
   def multi: F[Unit] =
     async
       .flatMap {
-        case c: RedisAsyncCommands[K, V] => RedisExecutor[F].delay(c.multi())
+        case c: RedisModulesAsyncCommands[K, V] => RedisExecutor[F].delay(c.multi())
         case _                           => conn.async.flatMap(c => RedisExecutor[F].delay(c.multi()))
       }
       .futureLift
@@ -547,7 +547,7 @@ private[redis4cats] class BaseRedis[F[_]: FutureLift: MonadThrow: RedisExecutor:
   def exec: F[Unit] =
     async
       .flatMap {
-        case c: RedisAsyncCommands[K, V] => RedisExecutor[F].delay(c.exec())
+        case c: RedisModulesAsyncCommands[K, V] => RedisExecutor[F].delay(c.exec())
         case _                           => conn.async.flatMap(c => RedisExecutor[F].delay(c.exec()))
       }
       .futureLift
@@ -559,7 +559,7 @@ private[redis4cats] class BaseRedis[F[_]: FutureLift: MonadThrow: RedisExecutor:
   def discard: F[Unit] =
     async
       .flatMap {
-        case c: RedisAsyncCommands[K, V] => RedisExecutor[F].delay(c.discard())
+        case c: RedisModulesAsyncCommands[K, V] => RedisExecutor[F].delay(c.discard())
         case _                           => conn.async.flatMap(c => RedisExecutor[F].delay(c.discard()))
       }
       .futureLift
@@ -568,7 +568,7 @@ private[redis4cats] class BaseRedis[F[_]: FutureLift: MonadThrow: RedisExecutor:
   def watch(keys: K*): F[Unit] =
     async
       .flatMap {
-        case c: RedisAsyncCommands[K, V] => RedisExecutor[F].delay(c.watch(keys: _*))
+        case c: RedisModulesAsyncCommands[K, V] => RedisExecutor[F].delay(c.watch(keys: _*))
         case _                           => conn.async.flatMap(c => RedisExecutor[F].delay(c.watch(keys: _*)))
       }
       .futureLift
@@ -577,7 +577,7 @@ private[redis4cats] class BaseRedis[F[_]: FutureLift: MonadThrow: RedisExecutor:
   def unwatch: F[Unit] =
     async
       .flatMap {
-        case c: RedisAsyncCommands[K, V] => RedisExecutor[F].delay(c.unwatch())
+        case c: RedisModulesAsyncCommands[K, V] => RedisExecutor[F].delay(c.unwatch())
         case _                           => conn.async.flatMap(c => RedisExecutor[F].delay(c.unwatch()))
       }
       .futureLift
@@ -1462,12 +1462,12 @@ private[redis4cats] class BaseRedis[F[_]: FutureLift: MonadThrow: RedisExecutor:
             output.outputType,
             // The Object requirement comes from the limitations of Java Generics. It is safe to assume K <: Object as
             // the underlying JRedisCodec would also only support K <: Object.
-            keys.toArray[Any].asInstanceOf[Array[K with Object]]
+            keys.toArray[Any].asInstanceOf[Array[K with Object]]: _*
           )
         )
       )
       .futureLift
-      .map(output.convert(_))
+      .map(output.convert)
 
   override def eval(script: String, output: ScriptOutputType[V], keys: List[K], values: List[V]): F[output.R] =
     async
@@ -1483,13 +1483,13 @@ private[redis4cats] class BaseRedis[F[_]: FutureLift: MonadThrow: RedisExecutor:
         )
       )
       .futureLift
-      .map(output.convert(_))
+      .map(output.convert)
 
   override def evalSha(digest: String, output: ScriptOutputType[V]): F[output.R] =
     async
       .flatMap(c => RedisExecutor[F].delay(c.evalsha[output.Underlying](digest, output.outputType)))
       .futureLift
-      .map(output.convert(_))
+      .map(output.convert)
 
   override def evalSha(digest: String, output: ScriptOutputType[V], keys: List[K]): F[output.R] =
     async
@@ -1499,12 +1499,12 @@ private[redis4cats] class BaseRedis[F[_]: FutureLift: MonadThrow: RedisExecutor:
             digest,
             output.outputType,
             // see comment in eval above
-            keys.toArray[Any].asInstanceOf[Array[K with Object]]
+            keys.toArray[Any].asInstanceOf[Array[K with Object]]: _*
           )
         )
       )
       .futureLift
-      .map(output.convert(_))
+      .map(output.convert)
 
   override def evalSha(digest: String, output: ScriptOutputType[V], keys: List[K], values: List[V]): F[output.R] =
     async
@@ -1520,7 +1520,7 @@ private[redis4cats] class BaseRedis[F[_]: FutureLift: MonadThrow: RedisExecutor:
         )
       )
       .futureLift
-      .map(output.convert(_))
+      .map(output.convert)
 
   override def scriptLoad(script: String): F[String] =
     async.flatMap(c => RedisExecutor[F].delay(c.scriptLoad(script))).futureLift

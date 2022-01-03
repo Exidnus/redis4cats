@@ -35,6 +35,7 @@ import io.lettuce.core.{BitFieldArgs, ClientOptions, GeoArgs, GeoRadiusStoreArgs
 import com.redis.lettucemod.api.async.RedisModulesAsyncCommands
 import com.redis.lettucemod.cluster.api.async.RedisModulesClusterAsyncCommands
 import com.redis.lettucemod.cluster.api.sync.{RedisModulesClusterCommands => RedisModulesClusterSyncCommands}
+import com.redis.lettucemod.api.sync.{RedisModulesCommands => RedisModulesSyncCommands}
 
 import scala.concurrent.duration._
 
@@ -423,11 +424,11 @@ private[redis4cats] class BaseRedis[F[_]: FutureLift: MonadThrow: RedisExecutor:
 
   import dev.profunktor.redis4cats.JavaConversions._
 
-  def async: F[RedisModulesClusterAsyncCommands[K, V]] =
-    if (cluster) conn.clusterAsync else conn.async.widen
+  def async: F[RedisModulesAsyncCommands[K, V]] =
+    if (cluster) conn.clusterAsync.widen else conn.async
 
-  def sync: F[RedisModulesClusterSyncCommands[K, V]] =
-    if (cluster) conn.clusterSync else conn.sync.widen
+  def sync: F[RedisModulesSyncCommands[K, V]] =
+    if (cluster) conn.clusterSync.widen else conn.sync
 
   /******************************* Keys API *************************************/
   def del(key: K*): F[Long] =
